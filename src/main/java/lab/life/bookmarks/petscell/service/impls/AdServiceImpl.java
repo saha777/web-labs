@@ -8,12 +8,18 @@ import lab.life.bookmarks.petscell.mapper.AdMapper;
 import lab.life.bookmarks.petscell.repository.AdRepository;
 import lab.life.bookmarks.petscell.repository.PetRepository;
 import lab.life.bookmarks.petscell.service.AdService;
+import lab.life.bookmarks.petscell.service.Iterator;
+import lab.life.bookmarks.petscell.service.IteratorProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -24,6 +30,7 @@ public class AdServiceImpl implements AdService {
     private final AdRepository adRepository;
     private final AdMapper adMapper;
     private final PetRepository petRepository;
+    private final IteratorProvider iteratorProvider;
 
     @Override
     public List<AdDto> getByUserId(Long userId) {
@@ -81,6 +88,19 @@ public class AdServiceImpl implements AdService {
         AdDto dto = getById(adId);
         adRepository.deleteById(adId);
         return dto;
+    }
+
+    @Transactional
+    public void removeOldAds() {
+        Iterator iterator = iteratorProvider.iterator();
+        List<Ad> oldAds = new ArrayList<>();
+        while (iterator.hasNext()) {
+            Ad ad = iterator.next();
+            if (ad.getEndDate().compareTo(Date.from(Instant.now().minus(1, ChronoUnit.YEARS))) < 0) {
+                oldAds.add(ad);
+            }
+        }
+        adRepository.deleteAll(oldAds);
     }
 
 }
